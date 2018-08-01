@@ -3,6 +3,28 @@
  */
 'use strict';
 
+
+function destructElement(element) {
+
+    if (!element) { return; }
+
+    return {
+        localName: element.localName,
+        id: element.id,
+        className: element.className,
+        attributes: element.getAttributeNames()
+    };
+}
+
+function destructEvent(event) {
+    const { clientX, clientY, pageX, pageY, type, which, buttons, timeStamp } = event;
+    const target = destructElement(event.path),
+          path = event.path.map(destructElement),
+          srcElement = destructElement(event.srcElement);
+
+    return { clientX, clientY, pageX, pageY, type, which, buttons, timeStamp, target, path, srcElement}
+}
+
 const UIActivityLogger = {
 
     waitingForIdle: false,
@@ -20,7 +42,7 @@ const UIActivityLogger = {
         this.waitingForIdle = true;
         window.requestIdleCallback(() => {
             this.waitingForIdle = false;
-            this.worker.postMessage({events: this.eventsBuffer});
+            this.worker.postMessage({events: this.eventsBuffer.map(destructEvent)});
             this.eventsBuffer = [];
         });
     },
