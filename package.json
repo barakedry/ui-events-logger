@@ -1,0 +1,26 @@
+{
+  "name": "ui-events-logger",
+  "version": "1.0.0",
+  "description": "automatic performant user activity logging, logs mouse click events on elements and keystrokes",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/barakedry/ui-events-logger.git"
+  },
+  "keywords": [
+    "user",
+    "activity",
+    "monitoring",
+    "activity",
+    "logger"
+  ],
+  "author": "Barak Edry",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/barakedry/ui-events-logger/issues"
+  },
+  "homepage": "https://github.com/barakedry/ui-events-logger#readme"
+}
