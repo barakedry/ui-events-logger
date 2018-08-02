@@ -3,26 +3,68 @@
  */
 'use strict';
 
+function getAttributes(node) {
+    if (node.nodeType !== 1 ) {
+        return;
+    }
 
-function destructElement(element) {
+    const attributes = [];
+    const names = node.getAttributeNames()
+    for (let i = 0; i < names.length; i++) {
+        attributes.push({a: names[i], v:node.getAttribute(names[i])});
+    }
 
-    if (!element) { return; }
+    return attributes;
+}
+
+function destructNode(node) {
+
+    if (!node) { return; }
 
     return {
-        localName: element.localName,
-        id: element.id,
-        className: element.className,
-        attributes: element.getAttributeNames()
+        localName: node.localName,
+        id: node.id,
+        type: node.nodeType,
+        className: node.className,
+        attributes: getAttributes(node),
+        isFragment: node.nodeType === 11
     };
 }
 
-function destructEvent(event) {
+
+function destructMouseEvent(event) {
     const { clientX, clientY, pageX, pageY, type, which, buttons, timeStamp } = event;
-    const target = destructElement(event.path),
-          path = event.path.map(destructElement),
-          srcElement = destructElement(event.srcElement);
+    const target = destructNode(event.target),
+        path = event.path.map(destructNode),
+        srcElement = destructNode(event.srcElement);
 
     return { clientX, clientY, pageX, pageY, type, which, buttons, timeStamp, target, path, srcElement}
+}
+
+function destructKeyboardEvent(event) {
+    const { type, which, buttons, timeStamp, charCode, keyCode } = event;
+    const target = destructNode(event.target),
+        path = event.path.map(destructNode),
+        srcElement = destructNode(event.srcElement);
+
+    return {type, timeStamp, target, path, srcElement, charCode, keyCode}
+}
+
+const eventDestructors = {
+    'click': destructMouseEvent,
+    'mousedown': destructMouseEvent,
+    'mouseup': destructMouseEvent,
+    'mouseover': destructMouseEvent,
+    'mouseout': destructMouseEvent,
+    'keyup': destructKeyboardEvent,
+    'keydown': destructKeyboardEvent,
+    'keypress':destructKeyboardEvent
+}
+
+function destructEvent(event) {
+    if (eventDestructors[event.type]) {
+        return eventDestructors[event.type](event);
+    }
 }
 
 const UIActivityLogger = {
@@ -32,7 +74,7 @@ const UIActivityLogger = {
     eventsBuffer: [],
 
     start() {
-        this.worker = new Worker('./worker.js');
+        this.worker = new Worker('/node_modules/ui-events-logger/worker.js');
         this.addHandlers();
     },
 
@@ -48,6 +90,9 @@ const UIActivityLogger = {
     },
 
     log(event) {
+
+        if (!event) { return; }
+
         if (this.idleSendTimeoutHandle) {
             clearTimeout(this.idleSendTimeoutHandle);
             this.idleSendTimeoutHandle = null;
@@ -57,17 +102,7 @@ const UIActivityLogger = {
         this.flushAtIdle();
     },
 
-    onMouseEvent(event) {
-
-        // defer
-        setTimeout(() => {
-            this.log(event);
-        }, 0);
-    },
-
-    onKeyEvent(e) {
-
-
+    onEvent(event) {
         // defer
         setTimeout(() => {
             this.log(event);
@@ -79,8 +114,8 @@ const UIActivityLogger = {
     },
 
     addHandlers() {
-        document.addEventListener('click', this.onMouseEvent.bind(this), true);
-        document.addEventListener('keyup', this.onKeyEvent.bind(this), true);
+        document.addEventListener('click', this.onEvent.bind(this), true);
+        document.addEventListener('keyup', this.onEvent.bind(this), true);
 
         window.addEventListener('blur', () => {
             if (this.idleSendTimeoutHandle) {
@@ -101,16 +136,16 @@ const UIActivityLogger = {
             }
         });
 
-        window.addEventListener('mouseove', () => {
+        window.addEventListener('mousemove', () => {
             if (this.idleSendTimeoutHandle) {
                 clearTimeout(this.idleSendTimeoutHandle);
                 this.idleSendTimeoutHandle = null;
             }
 
             this.idleSendTimeoutHandle = setTimeout(() => {
-                    this.send();
+                this.send();
                 this.idleSendTimeoutHandle = null;
-                }, 5000);
+            }, 5000);
         });
     }
 };
